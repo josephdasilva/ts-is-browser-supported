@@ -3,7 +3,7 @@
         "src/checkBrowserCompatibilityRule.ts"
     ],
     "compilerOptions": {
-        "outDir": "./out",
+        "outDir": "./dist",
         "strict": true,
         "alwaysStrict": true,
         "noImplicitAny": true,

@@ -20,19 +20,13 @@ import {
 export class Rule extends Rules.TypedRule {
 
     public static metadata: IRuleMetadata = {
-
-        ruleName: "check-browser-compatibility",
-
+        ruleName: "ts-is-supported",
         type: "functionality",
-
         typescriptOnly: false,
-
         requiresTypeInfo: true,
-
         description: "Checks code for possible compatibility issues with a given list of browsers.",
-
         descriptionDetails: TSLintUtils.dedent`
-            This rule checks TypeScript code for compatibility issues with a list 
+            This rule checks TypeScript code for compatibility issues with a list
             of target browsers which the code is intended to be able to run on.
             It will report an error if any type, function, property or event
             (passed as the first argument of an addEventListener call) used
@@ -64,18 +58,17 @@ export class Rule extends Rules.TypedRule {
             * typeof(A) !== "undefined" && A.x && A.x();
             * A.x && A.x();  /* if A exists */
         `,
-
         optionsDescription: TSLintUtils.dedent`
             The options for this rule must be an object which may have the
             following properties: "targets", "whitelist", "showNotes" and
             "showPartialImplementations".
 
-            The "targets" property specifies the browsers for which to check 
-            the code for compatibility. This is an object where the keys are 
-            the names of the browsers for which the code needs to be checked. 
-            The currently accepted names are: "chrome", "chrome_android", "edge", 
-            "firefox", "firefox_android", "ie", "nodejs", "opera", "opera_android", 
-            "qq_android", "safari", "safari_ios", "samsunginternet_android", 
+            The "targets" property specifies the browsers for which to check
+            the code for compatibility. This is an object where the keys are
+            the names of the browsers for which the code needs to be checked.
+            The currently accepted names are: "chrome", "chrome_android", "edge",
+            "firefox", "firefox_android", "ie", "nodejs", "opera", "opera_android",
+            "qq_android", "safari", "safari_ios", "samsunginternet_android",
             "uc_android", "uc_chinese_android" and "webview_android".
 
             For each browser name, the corresponding value in this object may be:
@@ -85,21 +78,21 @@ export class Rule extends Rules.TypedRule {
               fraction, the fraction is discarded and only the integer part is used.
             * The string "*", indicating that all versions of the browser must be supported.
 
-            Set the "showPartialImplementations" property to true to emit messages 
+            Set the "showPartialImplementations" property to true to emit messages
             that indicate that a feature or API being used is partially implemented in
             one of the target browsers. These messages are not suppressed by the use
-            of conditional statements, since they are associated with features 
+            of conditional statements, since they are associated with features
             that exist. They are, however, suppressed for whitelisted features.
             The default value of this property is false.
-        
-            Set the "showNotes" property to true to emit additional messages 
-            available in the MDN database for APIs that are otherwise fully supported. 
-            These messages are advisory in nature and usually do not indicate any 
-            problem. They messages are not suppressed by the use of conditional 
-            statements, but are suppressed for whitelisted features.The default 
+
+            Set the "showNotes" property to true to emit additional messages
+            available in the MDN database for APIs that are otherwise fully supported.
+            These messages are advisory in nature and usually do not indicate any
+            problem. They messages are not suppressed by the use of conditional
+            statements, but are suppressed for whitelisted features.The default
             value of this property is false.
 
-            The "whitelist" property, if specified, is array of whitelisted items. 
+            The "whitelist" property, if specified, is array of whitelisted items.
             Any compatibility issues related to these items will be suppressed.
             Each item in this array must be a string that represents a type,
             global variable or function, property, method or event to be whitelisted:
@@ -154,7 +147,7 @@ export class Rule extends Rules.TypedRule {
         // Initialisation is done here instead of in the constructor,
         // so that any exception thrown will be visible in the VS Code
         // problems panel.
-        
+
         if (!this.m_init) {
             this.m_compatChecker = _createOrGetCachedCompatChecker(this.ruleArguments[0]);
             [this.m_globalWhitelist, this.m_propertyWhitelist, this.m_eventWhitelist] = _parseWhitelist(this.ruleArguments[0].whitelist);
@@ -209,12 +202,11 @@ function _createOrGetCachedCompatChecker(options: any): ClientCompatChecker {
 }
 
 function _parseWhitelist(list: any):
-    [Dictionary<boolean>, Dictionary<Dictionary<boolean>>, Dictionary<Dictionary<boolean>>] 
-{
+    [Dictionary<boolean>, Dictionary<Dictionary<boolean>>, Dictionary<Dictionary<boolean>>] {
     const globalWhitelist = new Dictionary<boolean>();
     const propertyWhitelist = new Dictionary<Dictionary<boolean>>();
     const eventWhitelist = new Dictionary<Dictionary<boolean>>();
-    
+
     if (list === undefined)
         return [globalWhitelist, propertyWhitelist, eventWhitelist];
 

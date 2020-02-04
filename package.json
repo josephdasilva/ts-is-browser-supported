@@ -1,4 +1,7 @@
 {
+    "scripts": {
+        "build": "tsc -p tsconfig.json"
+    },
     "dependencies": {
         "@types/node": "^13.7.0",
         "mdn-browser-compat-data": "1.0.6",

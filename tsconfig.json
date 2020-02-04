@@ -1,0 +1,16 @@
+{
+    "files": [
+        "src/checkBrowserCompatibilityRule.ts"
+    ],
+    "compilerOptions": {
+        "outDir": "./out",
+        "strict": true,
+        "alwaysStrict": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noFallthroughCasesInSwitch": true,
+        "noEmitOnError": true,
+        "target": "ES5"
+    }
+}

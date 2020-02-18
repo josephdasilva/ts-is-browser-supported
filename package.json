@@ -1,11 +1,17 @@
 {
     "scripts": {
-        "build": "tsc -p tsconfig.json"
+        "build": "tsc -p tsconfig.json",
+        "test": "jest"
     },
     "dependencies": {
         "@types/node": "^13.7.0",
         "mdn-browser-compat-data": "1.0.6",
         "tslint": "5.15.0",
+        "tslint-sonarts": "^1.9.0",
         "typescript": "3.5.3"
+    },
+    "devDependencies": {
+        "jest": "25.1.0",
+        "ts-jest": "25.2.0"
     }
 }

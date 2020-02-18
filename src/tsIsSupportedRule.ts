@@ -1,21 +1,21 @@
 import {
-    Rules,
-    RuleFailure,
     IOptions,
     IRuleMetadata,
+    RuleFailure,
+    Rules,
     Utils as TSLintUtils,
 } from "tslint";
 
-import { SourceFile, Program } from "typescript";
+import {Program, SourceFile} from "typescript";
 
-import { Walker } from "./Walker";
-import { Dictionary } from "./utils";
-
-import {
-    ClientCompatChecker,
-    ClientCompatCheckerFlags,
-    supportedClientNames
-} from "./ClientCompatChecker";
+import ClientCompatChecker from "./ClientCompatChecker";
+import ClientCompatCheckerFlags from "./ClientCompatCheckerFlags";
+import ClientInfo from "./ClientInfo";
+import CompatData from "./CompatData";
+import IssueWithLocation from "./IssueWithLocation";
+import Version from "./Version";
+import Walker from "./Walker";
+import Whitelist from "./Whitelist";
 
 export class Rule extends Rules.TypedRule {
 
@@ -131,13 +131,12 @@ export class Rule extends Rules.TypedRule {
             required: ["targets"],
             additionalProperties: false,
         },
-    }
+    };
 
     private m_compatChecker: ClientCompatChecker | null = null;
-    private m_globalWhitelist: Dictionary<boolean> | null = null;
-    private m_propertyWhitelist: Dictionary<Dictionary<boolean>> | null = null;
-    private m_eventWhitelist: Dictionary<Dictionary<boolean>> | null = null;
+    private m_whitelist: Whitelist | null = null;
     private m_init: boolean = false;
+    private m_lastWalker: Walker | null = null;
 
     public constructor(options: IOptions) {
         super(options);
@@ -150,49 +149,51 @@ export class Rule extends Rules.TypedRule {
 
         if (!this.m_init) {
             this.m_compatChecker = _createOrGetCachedCompatChecker(this.ruleArguments[0]);
-            [this.m_globalWhitelist, this.m_propertyWhitelist, this.m_eventWhitelist] = _parseWhitelist(this.ruleArguments[0].whitelist);
+            this.m_whitelist = parseWhitelist(this.ruleArguments[0].whitelist);
 
             this.m_init = true;
         }
 
         const walker = new Walker(
-            sourceFile, program, this.ruleName, this.m_compatChecker!, this.m_globalWhitelist!,
-            this.m_propertyWhitelist!, this.m_eventWhitelist!);
+            sourceFile, program, this.ruleName, this.m_compatChecker!, this.m_whitelist!);
 
+        this.m_lastWalker = walker;
         return this.applyWithWalker(walker);
     }
 
+    public get issuesFound(): readonly IssueWithLocation[] {
+        return (this.m_lastWalker !== null) ? this.m_lastWalker.issuesFound : [];
+    }
+
 }
+
+const _compatData: CompatData = new CompatData();
 
 let _cachedTargets: any = {};
 let _cachedFlags: ClientCompatCheckerFlags = 0;
 let _cachedCompatChecker: ClientCompatChecker | null = null;
 
 function _createOrGetCachedCompatChecker(options: any): ClientCompatChecker {
-    let targets: any = options.targets || {};
+    const targets: any = options.targets || {};
 
-    let showNotes: boolean =
+    const showNotes: boolean =
         Boolean(("showNotes" in options) ? options.showNotes : false);
-    let showPartial: boolean =
+    const showPartial: boolean =
         Boolean(("showPartialImplementations" in options) ? options.showPartialImplementations : false);
 
     let flags: ClientCompatCheckerFlags = 0;
-    if (!showNotes)
+    if (!showNotes) {
         flags |= ClientCompatCheckerFlags.IGNORE_NOTES;
-    if (!showPartial)
+    }
+    if (!showPartial) {
         flags |= ClientCompatCheckerFlags.IGNORE_PARTIAL_IMPL;
-
-    let cacheMatch: boolean = (_cachedFlags === flags);
-
-    for (let i: number = 0; i < supportedClientNames.length && cacheMatch; i++) {
-        const name: string = supportedClientNames[i];
-        cacheMatch = cacheMatch && (targets[name] === _cachedTargets[name]);
     }
 
-    if (cacheMatch)
+    if (_canUseCachedCompatChecker(targets, flags)) {
         return _cachedCompatChecker!;
+    }
 
-    const checker = new ClientCompatChecker(targets, flags);
+    const checker = new ClientCompatChecker(_compatData, parseTargets(targets), flags);
 
     _cachedTargets = targets;
     _cachedFlags = flags;
@@ -201,33 +202,114 @@ function _createOrGetCachedCompatChecker(options: any): ClientCompatChecker {
     return checker;
 }
 
-function _parseWhitelist(list: any):
-    [Dictionary<boolean>, Dictionary<Dictionary<boolean>>, Dictionary<Dictionary<boolean>>] {
-    const globalWhitelist = new Dictionary<boolean>();
-    const propertyWhitelist = new Dictionary<Dictionary<boolean>>();
-    const eventWhitelist = new Dictionary<Dictionary<boolean>>();
+function _canUseCachedCompatChecker(targets: any, flags: ClientCompatCheckerFlags): boolean {
+    if (_cachedFlags !== flags) {
+        return false;
+    }
+    const supportedClientNames = _compatData.getSupportedClientNames();
+    for (let i: number = 0; i < supportedClientNames.length; i++) {
+        const name: string = supportedClientNames[i];
+        if (targets[name] !== _cachedTargets[name]) {
+            return false;
+        }
+    }
+    return true;
+}
 
-    if (list === undefined)
-        return [globalWhitelist, propertyWhitelist, eventWhitelist];
+export function parseTargets(targetsArg: any): ClientInfo[] {
+    if (targetsArg === undefined) {
+        return [];
+    }
+    if (typeof(targetsArg) !== "object") {
+        throw new TypeError("'targets' must be an object.");
+    }
 
-    if (!Array.isArray(list))
-        throw new TypeError("Whitelist must be an array.");
-    if (!(<any[]>list).every(x => typeof (x) === "string"))
-        throw new TypeError("The whitelist array must contain only strings.");
+    const clientInfos: ClientInfo[] = [];
+    for (const name in targetsArg) {
+        if (!targetsArg.hasOwnProperty(name)) {
+            continue;
+        }
+        const ver: any = targetsArg[name];
+        const [start, end] = _parseTargetVersion(name, ver);
+        clientInfos.push(new ClientInfo(name, _compatData.getDisplayName(name), start, end));
+    }
+    return clientInfos;
+}
 
-    const strings: string[] = <string[]>list;
+function _parseTargetVersion(targetName: string, targetVersion: any): [Version, Version] {
+    if (typeof(targetVersion) === "number") {
+        return [Version.create(targetVersion), Version.maxVal];
+    }
+    if (typeof(targetVersion) !== "string") {
+        throw new TypeError("Invalid version for target '" + targetName + "': must be a number or string.");
+    }
+    return _parseTargetVersionString(targetName, targetVersion);
+}
 
+function _parseTargetVersionString(targetName: string, targetVersion: string): [Version, Version] {
+    let start: Version;
+    let end: Version = Version.maxVal;
+
+    // This is similar to Version.rangeFromString(), except that:
+    // - For "*" and "<=" type ranges, the lower bound is taken as the first release for
+    //   the target name (obtained from the compat data), rather than 0.0
+    // - A single version number (e.g. "5" or "5.5") is interpreted as "from that version
+    //   to the maximum", i.e. all versions greater than or equal to that version.
+
+    if (targetVersion === "*") {
+        start = _compatData.getFirstVersion(targetName);
+    }
+    else if (targetVersion.startsWith("<=")) {
+        [, end] = Version.rangeFromString(targetVersion);
+        start = Version.min(_compatData.getFirstVersion(targetName), end);
+    }
+    else if (targetVersion.startsWith(">=")) {
+        start = Version.fromString(targetVersion.substring(2));
+    }
+    else if (targetVersion.indexOf("-") !== -1) {
+        [start, end] = Version.rangeFromString(targetVersion);
+    }
+    else {
+        start = Version.fromString(targetVersion);
+    }
+
+    return [start, end];
+}
+
+export function parseWhitelist(whitelistArg: any): Whitelist {
+    const whitelist = new Whitelist();
+
+    if (whitelistArg === undefined) {
+        return whitelist;
+    }
+    _ensureWhitelistArgumentValid(whitelistArg);
+
+    const strings = whitelistArg as string[];
     for (let i: number = 0; i < strings.length; i++) {
         const str = strings[i];
         const dotPos: number = str.indexOf(".");
 
-        if (dotPos === -1)
-            globalWhitelist.set(str, true);
-        else if (dotPos !== str.length - 1 && str.charCodeAt(dotPos + 1) === 0x40)
-            eventWhitelist.getOrNew(str.substr(0, dotPos), Dictionary).set(str.substr(dotPos + 2), true);
-        else
-            propertyWhitelist.getOrNew(str.substr(0, dotPos), Dictionary).set(str.substr(dotPos + 1), true);
+        if (dotPos === -1) {
+            // No property separator, so the name is a global.
+            whitelist.addGlobal(str);
+        }
+        else if (dotPos !== str.length - 1 && str.charCodeAt(dotPos + 1) === 0x40) {
+            // '@' prefix before property name indicates an event.
+            whitelist.addEvent(str.substring(0, dotPos), str.substring(dotPos + 2));
+        }
+        else {
+            whitelist.addProperty(str.substring(0, dotPos), str.substring(dotPos + 1));
+        }
     }
 
-    return [globalWhitelist, propertyWhitelist, eventWhitelist];
+    return whitelist;
+}
+
+function _ensureWhitelistArgumentValid(whitelistArg: any): void {
+    if (!Array.isArray(whitelistArg)) {
+        throw new TypeError("'whitelist' must be an array.");
+    }
+    if (!(whitelistArg as any[]).every(x => typeof (x) === "string")) {
+        throw new TypeError("The whitelist array must contain only strings.");
+    }
 }

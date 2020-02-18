@@ -185,9 +185,25 @@ test("Should not have any issues", () => {
         window.addEventListener("storage", null);
         `,
         {
+
             targets: {firefox: 68, chrome: 67, opera: 54, webview_android: 67},
         },
     )).toEqual([]);
+
+    expect(executeRule(
+        `
+        let e: Element;
+        e.addEventListener("wheel", null);
+        e.addEventListener("touchstart", e => {});
+        window.addEventListener("storage", e => {});
+        `,
+        {
+
+            targets: {firefox: 30, chrome: 30, ie: 9},
+            whitelist: ["Element.@wheel", "Element.@touchstart", "Window.@*", "WindowOrWorkerGlobalScope.@*"]
+        },
+    )).toEqual([]);
+
 
     expect(executeRule(
         "window.requestAnimationFrame();",
@@ -245,7 +261,7 @@ test("Issues should match", () => {
         ): OscillatorNode | IDBDatabase {}
         class Bar {
             public x: Geolocation;
-            public y(a: number, b: Foo<Map<string, string>>): Symbol;
+            public y(a: number, b: Foo<Map<string, string>>): Symbol[];
         }
         interface IBar {
             x: AudioContext;
@@ -397,7 +413,7 @@ test("Should not report guarded uses", () => {
         !Object.values || Object.values({a: 10});
         if (typeof(Array) === "undefined" || !Array.prototype.slice) { } else { [1, 2].slice(); }
         Math.cbrt ? Math.cbrt(100) : Math.sqrt(100);
-        !Math.cbrt ? Math.sqrt(100) : Math.cbry(100);
+        !Math.cbrt ? Math.sqrt(100) : Math.cbrt(100);
         function f(x: number): boolean { return (typeof(isNaN) !== "undefined") ? isNaN(x) : (x !== x); }
         z = (typeof(JSON) === "object" && JSON.stringify) ? JSON.stringify(1000) : "";
         z = (typeof(JSON) === "undefined" || !JSON.stringify) ? "" : JSON.stringify(1000);

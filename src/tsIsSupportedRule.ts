@@ -220,7 +220,7 @@ export function parseTargets(targetsArg: any): ClientInfo[] {
     if (targetsArg === undefined) {
         return [];
     }
-    if (typeof(targetsArg) !== "object") {
+    if (typeof(targetsArg) !== "object" || Array.isArray(targetsArg)) {
         throw new TypeError("'targets' must be an object.");
     }
 

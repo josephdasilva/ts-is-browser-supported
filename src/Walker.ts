@@ -231,7 +231,7 @@ class Walker extends AbstractWalker {
 
         const eventName: string = (firstArg as ts.StringLiteral).text;
         const targetType: ts.Type = this.m_typeChecker.getTypeAtLocation(propAccess.expression);
-        this._checkPropertyOrEvent(firstArg, targetType, eventName, false, true, false);
+        this._checkPropertyOrEvent(firstArg, targetType, eventName, false, true, true);
     }
 
     /**
@@ -571,9 +571,10 @@ class Walker extends AbstractWalker {
 
         const issues: Issue[] = _tempIssueArray;
         issues.length = 0;
-        this._getPropertyOrEventIssues(type, propName, isStatic, isEvent, checkBaseTypes, issues);
+        this._getPropertyOrEventIssues(
+            type, propName, propSymbol, isStatic, isEvent, checkBaseTypes, issues);
 
-        if (issues.length === 0 || !_isPropertyDefinedInLibrary(propSymbol, type)) {
+        if (issues.length === 0) {
             return;
         }
         if (propSymbol !== null && this._checkEnclosingGuards(issues, propSymbol)) {
@@ -585,27 +586,42 @@ class Walker extends AbstractWalker {
     }
 
     private _getPropertyOrEventIssues(
-        type: ts.Type, propName: string, isStatic: boolean, isEvent: boolean,
-        checkBaseTypes: boolean, issues: Issue[]): void
+        type: ts.Type, propName: string, propSymbol: ts.Symbol | null,
+        isStatic: boolean, isEvent: boolean, checkBaseTypes: boolean,
+        issues: Issue[]): void
     {
         const typeName: string | null = _getCompatCheckerTypeName(type, isStatic);
-        if (typeName === null
-            || this.m_whitelist.isPropertyOrEventWhitelisted(typeName, propName, isEvent))
-        {
+        if (typeName === null) {
+            return;
+        }
+        if (this.m_whitelist.isPropertyOrEventWhitelisted(typeName, propName, isEvent)) {
             return;
         }
 
-        const hasIssue: boolean = this.m_compatChecker.checkPropertyOrEvent(typeName, propName, isEvent, issues);
-        if (hasIssue || !checkBaseTypes) {
+        const oldIssuesLength: number = issues.length;
+        this.m_compatChecker.checkPropertyOrEvent(typeName, propName, isEvent, issues);
+
+        if (!_isPropertyDefinedInLibrary(propSymbol, type)) {
+            issues.length = oldIssuesLength;
+        }
+        if (issues.length !== 0 || !checkBaseTypes) {
             return;
         }
+        return this._getPropertyOrEventIssuesFromBaseTypes(
+            type, propName, propSymbol, isStatic, isEvent, issues);
+    }
 
+    private _getPropertyOrEventIssuesFromBaseTypes(
+        type: ts.Type, propName: string, propSymbol: ts.Symbol | null,
+        isStatic: boolean, isEvent: boolean, issues: Issue[]): void
+    {
         const baseTypes: ts.Type[] | undefined = type.getBaseTypes();
         if (baseTypes === undefined) {
             return;
         }
         for (let i: number = 0; i < baseTypes.length; i++) {
-            this._getPropertyOrEventIssues(baseTypes[i], propName, isStatic, isEvent, checkBaseTypes, issues);
+            this._getPropertyOrEventIssues(
+                baseTypes[i], propName, propSymbol, isStatic, isEvent, true, issues);
         }
     }
 
@@ -675,6 +691,9 @@ function _isSymbolDefinedInLibrary(symbol: ts.Symbol): boolean {
     }
 
     const decls = symbol.declarations;
+    if (decls === undefined) {
+        return false;
+    }
     for (let i: number = 0; i < decls.length; i++) {
         if (_isLibraryFilePath(decls[i].getSourceFile().fileName)) {
             _libraryDefinedSymbols.add(symbol);
@@ -699,8 +718,14 @@ function _isPropertyDefinedInLibrary(
     if (propSymbol !== null) {
         return _isSymbolDefinedInLibrary(propSymbol);
     }
-    if (declaringType !== null && declaringType.symbol !== undefined) {
+    if (declaringType === null) {
+        return false;
+    }
+    if (declaringType.symbol !== undefined) {
         return _isSymbolDefinedInLibrary(declaringType.symbol);
+    }
+    if (_isTypeOfTS36WindowGlobal(declaringType)) {
+        return true;
     }
     return false;
 }
@@ -744,7 +769,8 @@ function _getTypeName(type: ts.Type): string | null {
  */
 function _getCompatCheckerTypeName(type: ts.Type, isStatic: boolean): string | null {
     if (!type.symbol) {
-        return _isTypeOfWindowGlobal(type) ? _WINDOW_TYPE : null;
+        // In TS >=3.6 the window global has type Window & typeof(globalThis).
+        return _isTypeOfTS36WindowGlobal(type) ? _WINDOW_TYPE : null;
     }
     if (!isStatic) {
         return type.symbol.name;
@@ -764,13 +790,14 @@ function _getCompatCheckerTypeName(type: ts.Type, isStatic: boolean): string | n
 
 /**
  * Checks if the given type is the type of the "window"
- * global variable, which is defined as "Window & globalThis".
+ * global variable in TypeScript 3.6 and later, which is
+ * defined as "Window & globalThis".
  *
  * @returns True if the given type is the type of the window global,
  *          otherwise false.
  * @param type The type to check.
  */
-function _isTypeOfWindowGlobal(type: ts.Type): boolean {
+function _isTypeOfTS36WindowGlobal(type: ts.Type): boolean {
     if ((type.flags & ts.TypeFlags.Intersection) === 0) {
         return false;
     }

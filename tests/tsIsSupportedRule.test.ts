@@ -8,6 +8,7 @@ import Whitelist from "../src/Whitelist";
 import TestTSCompilerHost from "./TestTSCompilerHost";
 
 import * as ts from "typescript";
+import { parse } from "querystring";
 
 const _compilerHost: TestTSCompilerHost = new TestTSCompilerHost(
     {
@@ -73,11 +74,15 @@ test("parseTargets", () => {
         {name: "webview_android",  minVersion: {major: 12, minor: 0},        maxVersion: Version.maxVal                         },
     ]);
 
+    expect(parseTargets(undefined)).toEqual([]);
+
     expect(() => parseTargets({fireox: 5})).toThrow();
     expect(() => parseTargets({opera: "5-4"})).toThrow();
     expect(() => parseTargets({chrome: "foo"})).toThrow();
     expect(() => parseTargets({safari: true})).toThrow();
     expect(() => parseTargets({webview_android: [1, 2]})).toThrow();
+    expect(() => parseTargets("firefox: 5")).toThrow();
+    expect(() => parseTargets([{firefox: 5}])).toThrow();
 });
 
 test("parseWhitelist", () => {
@@ -143,7 +148,7 @@ test("Should not have any issues", () => {
         `
         new Array();
         new Function();
-        [].concat([1, 2, 3]);
+        [].concat([1, 2, 3])[0];
         /[Hh]ello+/g.test("Hellooooooo");
         (new Date()).getFullYear();
         isFinite();
@@ -202,7 +207,6 @@ test("Should not have any issues", () => {
         },
     )).toEqual([]);
 
-
     expect(executeRule(
         "window.requestAnimationFrame();",
         {
@@ -230,24 +234,29 @@ test("Should not have any issues", () => {
 });
 
 test("Issues should match", () => {
-
+    
     expect(executeRule(
         `
         Object.values({a: 10});
         for (let i: number = 0; i < 100; i++) { "abcd".padStart(10); }
-        function f() { return Math.cbrt(100); }
+        function f() { return Math.clz32(100); }
         if ([1, 2, 3].includes(1)) { console.log("Hello"); }
         /Hello, [0-9]+/.sticky;
+        Promise["resolve"]();
+        Promise.resolve();
         `,
         {
             targets: {ie: 11, firefox: 30},
-            whitelist: ["String.padStart", "Array.*"],
+            whitelist: ["String.padStart", "Array.*", "Promise.resolve"],
         },
     )).toMatchObject([
-        {sourceLineNum: 1, sourceCharNum: 15, issue: {featureName: "Object.values", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "firefox"}}},
-        {sourceLineNum: 1, sourceCharNum: 15, issue: {featureName: "Object.values", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
-        {sourceLineNum: 3, sourceCharNum: 35, issue: {featureName: "Math.cbrt",     kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
-        {sourceLineNum: 5, sourceCharNum: 24, issue: {featureName: "RegExp.sticky", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
+        {sourceLineNum: 1,  sourceCharNum: 15, issue: {featureName: "Object.values", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "firefox"}}},
+        {sourceLineNum: 1,  sourceCharNum: 15, issue: {featureName: "Object.values", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
+        {sourceLineNum: 3,  sourceCharNum: 35, issue: {featureName: "Math.clz32",    kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "firefox"}}},
+        {sourceLineNum: 3,  sourceCharNum: 35, issue: {featureName: "Math.clz32",    kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
+        {sourceLineNum: 5,  sourceCharNum: 24, issue: {featureName: "RegExp.sticky", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
+        {sourceLineNum: 6,  sourceCharNum: 8,  issue: {featureName: "Promise",       kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
+        {sourceLineNum: 7,  sourceCharNum: 8,  issue: {featureName: "Promise",       kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
     ]);
 
     expect(executeRule(
@@ -266,6 +275,8 @@ test("Issues should match", () => {
             y(a: BigInt | (RegExp & Int8Array)): HTMLCanvasElement | undefined;
             [x: string]: Geolocation;
         }
+        function f<T extends Int32Array>(): Symbol {}
+        let g = f();
         `,
         {
             targets: {ie: 6},
@@ -287,6 +298,9 @@ test("Issues should match", () => {
         {sourceLineNum: 12, sourceCharNum: 36, issue: {featureName: "Int8Array",         clientInfo: {name: "ie"}, kind: IssueKind.NOT_SUPPORTED}},
         {sourceLineNum: 12, sourceCharNum: 49, issue: {featureName: "HTMLCanvasElement", clientInfo: {name: "ie"}, kind: IssueKind.NOT_SUPPORTED}},
         {sourceLineNum: 13, sourceCharNum: 25, issue: {featureName: "Geolocation",       clientInfo: {name: "ie"}, kind: IssueKind.NOT_SUPPORTED}},
+        {sourceLineNum: 15, sourceCharNum: 29, issue: {featureName: "Int32Array",        clientInfo: {name: "ie"}, kind: IssueKind.NOT_SUPPORTED}},
+        {sourceLineNum: 15, sourceCharNum: 44, issue: {featureName: "Symbol",            clientInfo: {name: "ie"}, kind: IssueKind.NOT_SUPPORTED}},
+        {sourceLineNum: 16, sourceCharNum: 12, issue: {featureName: "Symbol",            clientInfo: {name: "ie"}, kind: IssueKind.NOT_SUPPORTED}},
     ]);
 
     expect(executeRule(
@@ -368,7 +382,7 @@ test("Issues should match", () => {
             issue: {featureName: "Element.requestFullscreen", clientInfo: {name: "safari_ios"}, kind: IssueKind.NEEDS_PREFIX, altOrPrefix: "webkit"},
         },
     ]);
-
+    
     expect(executeRule(
         `
         let el: Element;
@@ -382,7 +396,7 @@ test("Issues should match", () => {
         {sourceLineNum: 2, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "ie"}}},
         {sourceLineNum: 2, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "safari"}}},
     ]);
-
+    
     expect(executeRule(
         "crypto.subtle.decrypt()",
         {
@@ -443,3 +457,121 @@ test("Should not report guarded uses", () => {
     ]);
 
 });
+
+test("Window for TS >= 3.6", () => {
+
+    expect(executeRule(
+        `
+        let w: Window & typeof globalThis;
+        w.navigator;
+        w.requestAnimationFrame();
+        w.addEventListener("mouseenter", e => {});
+        w.addEventListener("storage", e => {});
+        `,
+        {
+            targets: {firefox: 45, chrome: 24},
+        }
+    )).toEqual([]);
+
+    expect(executeRule(
+        `
+        let w: Window & typeof globalThis;
+        w.requestAnimationFrame();
+        `,
+        {
+            targets: {firefox: "4-22"},
+        },
+    )).toMatchObject([
+        {
+            sourceLineNum: 2,
+            issue: {featureName: "Window.requestAnimationFrame", clientInfo: {name: "firefox"}, kind: IssueKind.NEEDS_PREFIX, altOrPrefix: "moz", startVersion: {major: 4}},
+        },
+        {
+            sourceLineNum: 2,
+            issue: {featureName: "Window.requestAnimationFrame", clientInfo: {name: "firefox"}, kind: IssueKind.NEEDS_PREFIX, altOrPrefix: "moz", startVersion: {major: 11}},
+        },
+    ]);
+
+    expect(executeRule(
+        `
+        let w: Window & typeof globalThis;
+        w.addEventListener("storage", null);
+        `,
+        {
+            targets: {opera: 14, firefox: 44},
+        },
+    )).toMatchObject([
+        {
+            sourceLineNum: 2,
+            issue: {featureName: "Window.storage", clientInfo: {name: "firefox"}, kind: IssueKind.NOT_SUPPORTED},
+        },
+        {
+            sourceLineNum: 2,
+            issue: {featureName: "Window.storage", clientInfo: {name: "opera"}, kind: IssueKind.NOT_SUPPORTED},
+        },
+    ]);
+
+});
+
+test("Base properties and events of inherited classes", () => {
+
+    expect(executeRule(
+        `
+        class MyRegExp1 extends RegExp {}
+        class MyRegExp2 extends MyRegExp1 {}
+        (new MyRegExp1()).sticky;
+        (new MyRegExp2()).sticky;
+        `,
+        {
+            targets: {ie: 11, firefox: 30}
+        }
+    )).toMatchObject([
+        {sourceLineNum: 3, sourceCharNum: 26, issue: {featureName: "RegExp.sticky", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
+        {sourceLineNum: 4, sourceCharNum: 26, issue: {featureName: "RegExp.sticky", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
+    ]);
+
+    expect(executeRule(
+        `
+        class MyElement extends Element {}
+        let el: MyElement;
+        el.addEventListener("touchstart", e => {});
+        `,
+        {
+            targets: {ie: 11, safari: 10, safari_ios: "*", edge: 12, chrome: 30, firefox: 30, firefox_android: 6},
+        },
+    )).toMatchObject([
+        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "firefox"}}},
+        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "ie"}}},
+        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "safari"}}},
+    ]);
+
+})
+
+test("Only library defined properties must be checked", () => {
+
+    expect(executeRule(
+        `
+        namespace foo {
+            class Array<T> {
+                public includes(x: T): boolean { return false; }
+            }
+            class Navigator {
+                public serviceWorker: any;
+            }
+            let a: Array<number>;
+            a.includes(0);
+            let navigator: Navigator;
+            navigator.serviceWorker;
+        }
+        let a: Array<number>;
+        a.includes(0);
+        `,
+        {
+            targets: {ie: 8, firefox: 30}
+        }
+    )).toMatchObject([
+        {sourceLineNum: 14, issue: {featureName: "Array.includes", clientInfo: {name: "firefox"}}},
+        {sourceLineNum: 14, issue: {featureName: "Array.includes", clientInfo: {name: "ie"}}},
+    ]);
+    
+})

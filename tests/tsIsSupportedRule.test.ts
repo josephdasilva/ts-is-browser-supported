@@ -8,7 +8,6 @@ import Whitelist from "../src/Whitelist";
 import TestTSCompilerHost from "./TestTSCompilerHost";
 
 import * as ts from "typescript";
-import { parse } from "querystring";
 
 const _compilerHost: TestTSCompilerHost = new TestTSCompilerHost(
     {

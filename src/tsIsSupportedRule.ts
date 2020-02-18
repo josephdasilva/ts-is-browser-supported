@@ -6,7 +6,7 @@ import {
     Utils as TSLintUtils,
 } from "tslint";
 
-import {Program, SourceFile} from "typescript";
+import {Program, SourceFile, version as tsVersion} from "typescript";
 
 import ClientCompatChecker from "./ClientCompatChecker";
 import ClientCompatCheckerFlags from "./ClientCompatCheckerFlags";
@@ -16,6 +16,9 @@ import IssueWithLocation from "./IssueWithLocation";
 import Version from "./Version";
 import Walker from "./Walker";
 import Whitelist from "./Whitelist";
+
+// Set this to the version of the typescript module used when building.
+const COMPILED_WITH_VERSION: string = "3.5.3";
 
 export class Rule extends Rules.TypedRule {
 
@@ -127,6 +130,7 @@ export class Rule extends Rules.TypedRule {
                 },
                 showNotes: { type: "boolean" },
                 showPartialImplementations: { type: "boolean" },
+                noVersionCheck: { type: "boolean" },
             },
             required: ["targets"],
             additionalProperties: false,
@@ -148,8 +152,11 @@ export class Rule extends Rules.TypedRule {
         // problems panel.
 
         if (!this.m_init) {
-            this.m_compatChecker = _createOrGetCachedCompatChecker(this.ruleArguments[0]);
-            this.m_whitelist = parseWhitelist(this.ruleArguments[0].whitelist);
+            const options: any = this.ruleArguments[0];
+            _checkTSVersion(options);
+
+            this.m_compatChecker = _createOrGetCachedCompatChecker(options);
+            this.m_whitelist = parseWhitelist(options.whitelist);
 
             this.m_init = true;
         }
@@ -172,6 +179,16 @@ const _compatData: CompatData = new CompatData();
 let _cachedTargets: any = {};
 let _cachedFlags: ClientCompatCheckerFlags = 0;
 let _cachedCompatChecker: ClientCompatChecker | null = null;
+
+function _checkTSVersion(options: any): void {
+    if (tsVersion !== COMPILED_WITH_VERSION && !options.noVersionCheck) {
+        throw new Error(
+            `The TypeScript version used by TSLint (${tsVersion}) does not `
+            + `match the one with which this rule was built (${COMPILED_WITH_VERSION}). `
+            + `This rule may not work properly. (To disable the version check, set `
+            + `the noVersionCheck option to true.)`);
+    }
+}
 
 function _createOrGetCachedCompatChecker(options: any): ClientCompatChecker {
     const targets: any = options.targets || {};

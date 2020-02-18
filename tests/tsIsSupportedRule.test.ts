@@ -185,7 +185,6 @@ test("Should not have any issues", () => {
         window.addEventListener("storage", null);
         `,
         {
-
             targets: {firefox: 68, chrome: 67, opera: 54, webview_android: 67},
         },
     )).toEqual([]);
@@ -198,7 +197,6 @@ test("Should not have any issues", () => {
         window.addEventListener("storage", e => {});
         `,
         {
-
             targets: {firefox: 30, chrome: 30, ie: 9},
             whitelist: ["Element.@wheel", "Element.@touchstart", "Window.@*", "WindowOrWorkerGlobalScope.@*"]
         },

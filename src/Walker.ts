@@ -107,6 +107,11 @@ class Walker extends AbstractWalker {
         }
     }
 
+    /**
+     * If a Node instance is passed, visits it. If the argument passed is null
+     * or undefined, does nothing.
+     * @param node A Node instance, null, or undefined.
+     */
     private _visitIfDefinedAndNotNull(node: ts.Node | null | undefined) {
         if (node !== undefined && node !== null) {
             this._visit(node);
@@ -370,6 +375,15 @@ class Walker extends AbstractWalker {
         }
     }
 
+    /**
+     * Visits a guard expression created from the condition of a conditional statement or
+     * a logical AND/OR expression. If the guard expression guards a symbol, that symbol
+     * will be pushed onto the guarded symbols stack.
+     *
+     * @param guardExpr  A GuardExpression instance.
+     * @param sourceExpr The expression node from which the guard expression was created, used
+     *                   to prevent a recursion cycle.
+     */
     private _visitGuardExpressionAndPushSymbol(guardExpr: GuardExpression, sourceExpr: ts.Expression): void {
         if (guardExpr.guardedSymbol !== null) {
             this._visitIfDefinedAndNotNull(guardExpr.getSymbolResolveTarget());
@@ -384,6 +398,15 @@ class Walker extends AbstractWalker {
         }
     }
 
+    /**
+     * Visits a guard expression chain created from a binary operation chain involving
+     * the logical AND or OR operator. If any of the guard expressions in the chain
+     * have guarded symbols, those symbols are pushed onto the guarded symbol stack.
+     *
+     * @param chain      A GuardExprChain instance.
+     * @param sourceExpr The expression node from which the guard expression chain was created.
+     *                   Used to prevent a recursion cycle.
+     */
     private _visitGuardExprChainAndPushSymbols(chain: GuardExprChain, sourceExpr: ts.Expression): void {
         for (let i: number = 0; i < chain.expressions.length; i++) {
             this._visitGuardExpressionAndPushSymbol(chain.expressions[i], sourceExpr);
@@ -492,6 +515,13 @@ class Walker extends AbstractWalker {
         }
     }
 
+    /**
+     * Checks for compatibility issues with a global symbol. Any issues found will be
+     * reported.
+     *
+     * @param node   The AST node to be used as the location for reporting any issues.
+     * @param symbol The global symbol for which to check for issues.
+     */
     private _checkGlobal(node: ts.Node, symbol: ts.Symbol | undefined): void {
         const issues = _tempIssueArray;
         issues.length = 0;
@@ -508,6 +538,21 @@ class Walker extends AbstractWalker {
         }
     }
 
+    /**
+     * Checks for compatibility issues with a property or event on a type. Any issues found
+     * will be reported.
+     *
+     * @param node            The AST node to be used as the location for reporting any issues.
+     * @param type            The type that declares the property/event.
+     * @param prop            The property or event to be checked for issues, either a property
+     *                        symbol or a property/event name as a string.
+     * @param isStatic        True if "prop" represents a static property.
+     * @param isEvent         True if "prop" should be interpreted as the name of an event rather
+     *                        than a property or method.
+     * @param checkBaseTypes  True if the base type(s) of "type" must also be checked recursively.
+     *                        Set this to true if it is not known as to on which type the actual
+     *                        declaration exists.
+     */
     private _checkPropertyOrEvent(
         node: ts.Node, type: ts.Type, prop: ts.Symbol | string, isStatic: boolean,
         isEvent: boolean, checkBaseTypes: boolean): void
@@ -782,6 +827,13 @@ function _canIssuesBeSuppressedByGuards(issues: Issue[]): boolean {
     return false;
 }
 
+/**
+ * Returns a value indicating whether a binary expression with the given operator
+ * can possibly be a guard expression.
+ * @returns True if a binary expression with the given operator can be a guard expression,
+ *          false if it can never be a guard expression.
+ * @param op A binary operator token.
+ */
 function _canBinaryOperatorBeUsedInGuard(op: ts.BinaryOperator): boolean {
     return op === ts.SyntaxKind.AmpersandAmpersandToken
         || op === ts.SyntaxKind.BarBarToken

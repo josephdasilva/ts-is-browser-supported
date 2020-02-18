@@ -20,9 +20,5 @@
         "quotemark": [true, "double"],
         "semicolon": [true, "always", "ignore-bound-class-methods"],
         "variable-name": false
-    },
-
-    "linterOptions": {
-        "exclude": ["tests/*.test.ts"]
     }
 }

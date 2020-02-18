@@ -1,3 +1,5 @@
+/* tslint:disable no-big-function max-line-length no-duplicate-string mccabe-complexity cognitive-complexity */
+
 import Whitelist from "../src/Whitelist";
 
 let w: Whitelist;

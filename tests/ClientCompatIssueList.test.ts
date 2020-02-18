@@ -1,3 +1,5 @@
+/* tslint:disable no-big-function max-line-length no-duplicate-string mccabe-complexity cognitive-complexity */
+
 import ClientCompatIssueList from "../src/ClientCompatIssueList";
 import ClientInfo from "../src/ClientInfo";
 import Issue, {IssueKind} from "../src/Issue";

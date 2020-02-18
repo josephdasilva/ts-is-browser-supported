@@ -1,3 +1,5 @@
+/* tslint:disable no-big-function max-line-length no-duplicate-string mccabe-complexity cognitive-complexity */
+
 import CompatData from "../src/CompatData";
 import {IssueKind} from "../src/Issue";
 import IssueWithLocation from "../src/IssueWithLocation";
@@ -202,7 +204,7 @@ test("Should not have any issues", () => {
         `,
         {
             targets: {firefox: 30, chrome: 30, ie: 9},
-            whitelist: ["Element.@wheel", "Element.@touchstart", "Window.@*", "WindowOrWorkerGlobalScope.@*"]
+            whitelist: ["Element.@wheel", "Element.@touchstart", "Window.@*", "WindowOrWorkerGlobalScope.@*"],
         },
     )).toEqual([]);
 
@@ -233,7 +235,7 @@ test("Should not have any issues", () => {
 });
 
 test("Issues should match", () => {
-    
+
     expect(executeRule(
         `
         Object.values({a: 10});
@@ -381,7 +383,7 @@ test("Issues should match", () => {
             issue: {featureName: "Element.requestFullscreen", clientInfo: {name: "safari_ios"}, kind: IssueKind.NEEDS_PREFIX, altOrPrefix: "webkit"},
         },
     ]);
-    
+
     expect(executeRule(
         `
         let el: Element;
@@ -395,7 +397,7 @@ test("Issues should match", () => {
         {sourceLineNum: 2, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "ie"}}},
         {sourceLineNum: 2, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "safari"}}},
     ]);
-    
+
     expect(executeRule(
         "crypto.subtle.decrypt()",
         {
@@ -469,7 +471,7 @@ test("Window for TS >= 3.6", () => {
         `,
         {
             targets: {firefox: 45, chrome: 24},
-        }
+        },
     )).toEqual([]);
 
     expect(executeRule(
@@ -522,8 +524,8 @@ test("Base properties and events of inherited classes", () => {
         (new MyRegExp2()).sticky;
         `,
         {
-            targets: {ie: 11, firefox: 30}
-        }
+            targets: {ie: 11, firefox: 30},
+        },
     )).toMatchObject([
         {sourceLineNum: 3, sourceCharNum: 26, issue: {featureName: "RegExp.sticky", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
         {sourceLineNum: 4, sourceCharNum: 26, issue: {featureName: "RegExp.sticky", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
@@ -544,7 +546,7 @@ test("Base properties and events of inherited classes", () => {
         {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "safari"}}},
     ]);
 
-})
+});
 
 test("Only library defined properties must be checked", () => {
 
@@ -566,11 +568,11 @@ test("Only library defined properties must be checked", () => {
         a.includes(0);
         `,
         {
-            targets: {ie: 8, firefox: 30}
-        }
+            targets: {ie: 8, firefox: 30},
+        },
     )).toMatchObject([
         {sourceLineNum: 14, issue: {featureName: "Array.includes", clientInfo: {name: "firefox"}}},
         {sourceLineNum: 14, issue: {featureName: "Array.includes", clientInfo: {name: "ie"}}},
     ]);
-    
-})
+
+});

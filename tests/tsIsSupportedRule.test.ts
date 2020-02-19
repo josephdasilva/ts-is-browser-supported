@@ -541,9 +541,9 @@ test("Base properties and events of inherited classes", () => {
             targets: {ie: 11, safari: 10, safari_ios: "*", edge: 12, chrome: 30, firefox: 30, firefox_android: 6},
         },
     )).toMatchObject([
-        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "firefox"}}},
-        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "ie"}}},
-        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", clientInfo: {name: "safari"}}},
+        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "firefox"}}},
+        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
+        {sourceLineNum: 3, sourceCharNum: 28, issue: {featureName: "Element.touchstart", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "safari"}}},
     ]);
 
 });
@@ -571,8 +571,8 @@ test("Only library defined properties must be checked", () => {
             targets: {ie: 8, firefox: 30},
         },
     )).toMatchObject([
-        {sourceLineNum: 14, issue: {featureName: "Array.includes", clientInfo: {name: "firefox"}}},
-        {sourceLineNum: 14, issue: {featureName: "Array.includes", clientInfo: {name: "ie"}}},
+        {sourceLineNum: 14, issue: {featureName: "Array.includes", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "firefox"}}},
+        {sourceLineNum: 14, issue: {featureName: "Array.includes", kind: IssueKind.NOT_SUPPORTED, clientInfo: {name: "ie"}}},
     ]);
 
 });

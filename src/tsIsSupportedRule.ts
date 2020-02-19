@@ -18,7 +18,7 @@ import Walker from "./Walker";
 import Whitelist from "./Whitelist";
 
 // Set this to the version of the typescript module used when building.
-const COMPILED_WITH_VERSION: string = "3.5.3";
+const COMPILED_WITH_TS_VERSION: string = "3.5.3";
 
 export class Rule extends Rules.TypedRule {
 
@@ -130,7 +130,7 @@ export class Rule extends Rules.TypedRule {
                 },
                 showNotes: { type: "boolean" },
                 showPartialImplementations: { type: "boolean" },
-                noVersionCheck: { type: "boolean" },
+                noTSVersionCheck: { type: "boolean" },
             },
             required: ["targets"],
             additionalProperties: false,
@@ -181,12 +181,12 @@ let _cachedFlags: ClientCompatCheckerFlags = 0;
 let _cachedCompatChecker: ClientCompatChecker | null = null;
 
 function _checkTSVersion(options: any): void {
-    if (tsVersion !== COMPILED_WITH_VERSION && !options.noVersionCheck) {
+    if (tsVersion !== COMPILED_WITH_TS_VERSION && !options.noTSVersionCheck) {
         throw new Error(
             `The TypeScript version used by TSLint (${tsVersion}) does not `
-            + `match the one with which this rule was built (${COMPILED_WITH_VERSION}). `
-            + `This rule may not work properly. (To disable the version check, set `
-            + `the noVersionCheck option to true.)`);
+            + `match the one with which this rule was built (${COMPILED_WITH_TS_VERSION}). `
+            + `This rule may not work properly. (To bypass this version check, set `
+            + `the noTSVersionCheck option to true.)`);
     }
 }
 

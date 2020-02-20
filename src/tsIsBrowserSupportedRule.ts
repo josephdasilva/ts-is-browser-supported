@@ -6,7 +6,10 @@ import {
     Utils as TSLintUtils,
 } from "tslint";
 
-import {Program, SourceFile, version as tsVersion} from "typescript";
+import {
+    Program,
+    SourceFile,
+} from "typescript";
 
 import ClientCompatChecker from "./ClientCompatChecker";
 import ClientCompatCheckerFlags from "./ClientCompatCheckerFlags";
@@ -17,13 +20,10 @@ import Version from "./Version";
 import Walker from "./Walker";
 import Whitelist from "./Whitelist";
 
-// Set this to the version of the typescript module used when building.
-const COMPILED_WITH_TS_VERSION: string = "3.5.3";
-
 export class Rule extends Rules.TypedRule {
 
     public static metadata: IRuleMetadata = {
-        ruleName: "ts-is-supported",
+        ruleName: "ts-is-browser-supported",
         type: "functionality",
         typescriptOnly: false,
         requiresTypeInfo: true,
@@ -153,8 +153,6 @@ export class Rule extends Rules.TypedRule {
 
         if (!this.m_init) {
             const options: any = this.ruleArguments[0];
-            _checkTSVersion(options);
-
             this.m_compatChecker = _createOrGetCachedCompatChecker(options);
             this.m_whitelist = parseWhitelist(options.whitelist);
 
@@ -179,16 +177,6 @@ const _compatData: CompatData = new CompatData();
 let _cachedTargets: any = {};
 let _cachedFlags: ClientCompatCheckerFlags = 0;
 let _cachedCompatChecker: ClientCompatChecker | null = null;
-
-function _checkTSVersion(options: any): void {
-    if (tsVersion !== COMPILED_WITH_TS_VERSION && !options.noTSVersionCheck) {
-        throw new Error(
-            `The TypeScript version used by TSLint (${tsVersion}) does not `
-            + `match the one with which this rule was built (${COMPILED_WITH_TS_VERSION}). `
-            + `This rule may not work properly. (To bypass this version check, set `
-            + `the noTSVersionCheck option to true.)`);
-    }
-}
 
 function _createOrGetCachedCompatChecker(options: any): ClientCompatChecker {
     const targets: any = options.targets || {};

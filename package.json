@@ -1,18 +1,20 @@
 {
     "scripts": {
-        "build": "tsc -p tsconfig.json",
+        "build": "rm -rf dist; tsc -p tsconfig.json",
         "test": "jest"
     },
     "dependencies": {
-        "@types/node": "^13.7.0",
-        "mdn-browser-compat-data": "1.0.6",
-        "tslint": "5.15.0",
-        "typescript": "3.5.3"
+        "mdn-browser-compat-data": "1.0.6"
     },
     "devDependencies": {
         "jest": "25.1.0",
         "ts-jest": "25.2.0",
-        "@types/jest": "25.1.2",
-        "tslint-sonarts": "^1.9.0"
+        "tslint-sonarts": "^1.9.0",
+        "@types/node": "^13.7.0",
+        "@types/jest": "25.1.2"
+    },
+    "peerDependencies": {
+        "tslint": "5.15.0",
+        "typescript": "3.5.3"
     }
 }

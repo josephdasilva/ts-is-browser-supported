@@ -3,7 +3,7 @@
 import CompatData from "../src/CompatData";
 import {IssueKind} from "../src/Issue";
 import IssueWithLocation from "../src/IssueWithLocation";
-import {parseTargets, parseWhitelist, Rule} from "../src/tsIsSupportedRule";
+import {parseTargets, parseWhitelist, Rule} from "../src/tsIsBrowserSupportedRule";
 import Version from "../src/Version";
 import Whitelist from "../src/Whitelist";
 
@@ -419,6 +419,8 @@ test("Should not report guarded uses", () => {
         if (typeof(JSON) !== "undefined" && JSON.parse) { JSON.parse("{}"); }
         if (typeof(Array) !== "undefined" && Array.prototype.slice) { [1, 2].slice(); }
         if (typeof(Array) !== "undefined" && ["Foo"].slice) { [1, 2].slice(); }
+        if (typeof(Array) !== "undefined") { if (Array.prototype.slice) { [1, 2].slice(); } }
+        if (typeof(Array) !== "undefined") { if (["Foo"].slice) { [1, 2].slice(); } }
         if (typeof(RegExp) !== "undefined" && /regex/.sticky !== undefined) { (new RegExp("")).sticky; }
         if (Object.values) { Object.values({a: 10}); } else { }
         if (!Object.values) { } else { Object.values({a: 10}); }

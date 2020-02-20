@@ -347,7 +347,7 @@ class Walker extends AbstractWalker {
      * @param elseNode  The branch taken if the condition is false.
      */
     private _visitIfStatementOrExpr(
-        condition: ts.Expression, thenNode: ts.Node, elseNode?: ts.Node): void
+        condition: ts.Expression, thenNode: ts.Node, elseNode: ts.Node | undefined): void
     {
         const guardExprOrChain = this.m_guardExprChecker.evaluateChain(condition);
         const oldGuardStackDepth: number = this.m_guardStack.length;

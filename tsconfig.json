@@ -1,6 +1,6 @@
 {
     "files": [
-        "src/tsIsSupportedRule.ts"
+        "src/tsIsBrowserSupportedRule.ts"
     ],
     "compilerOptions": {
         "outDir": "./dist",

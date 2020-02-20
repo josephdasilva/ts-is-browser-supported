@@ -147,15 +147,19 @@ export class Rule extends Rules.TypedRule {
     }
 
     public applyWithProgram(sourceFile: SourceFile, program: Program): RuleFailure[] {
+        if (this.ruleArguments[0] === false) {
+            return [];
+        }
+
         // Initialisation is done here instead of in the constructor,
         // so that any exception thrown will be visible in the VS Code
         // problems panel.
 
         if (!this.m_init) {
             const options: any = this.ruleArguments[0];
+
             this.m_compatChecker = _createOrGetCachedCompatChecker(options);
             this.m_whitelist = parseWhitelist(options.whitelist);
-
             this.m_init = true;
         }
 
